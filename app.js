@@ -1,10 +1,13 @@
 const video = document.getElementById("video");
 const viewfinder = document.getElementById("viewfinder");
 const frameOverlay = document.getElementById("frameOverlay");
+const stickerFloat = document.getElementById("stickerFloat");
 const countdownEl = document.getElementById("countdown");
 const flashEl = document.getElementById("flash");
 const camError = document.getElementById("camError");
 const shutterBtn = document.getElementById("shutterBtn");
+const shutterHint = document.getElementById("shutterHint");
+const vfBadge = document.getElementById("vfBadge");
 const flipBtn = document.getElementById("flipBtn");
 const countdownBtn = document.getElementById("countdownBtn");
 const demoBtn = document.getElementById("demoBtn");
@@ -12,33 +15,58 @@ const themeSelect = document.getElementById("themeSelect");
 const filterGrid = document.getElementById("filterGrid");
 const frameGrid = document.getElementById("frameGrid");
 const stickerRow = document.getElementById("stickerRow");
+const layoutGrid = document.getElementById("layoutGrid");
+const layoutCount = document.getElementById("layoutCount");
 const captionInput = document.getElementById("captionInput");
 const shotsEl = document.getElementById("shots");
+const shotsCount = document.getElementById("shotsCount");
 const downloadBtn = document.getElementById("downloadBtn");
 const clearBtn = document.getElementById("clearBtn");
 
 const FILTERS = [
   { id: "none", name: "Normal", css: "none" },
   { id: "mono", name: "Mono", css: "grayscale(1) contrast(1.1)" },
-  { id: "sepia", name: "Retro", css: "sepia(.8) contrast(1.05)" },
+  { id: "noir", name: "Noir", css: "grayscale(1) contrast(1.6) brightness(.92)" },
+  { id: "retro", name: "Retro", css: "sepia(.75) contrast(1.08) saturate(1.15)" },
   { id: "warm", name: "Warm", css: "saturate(1.4) hue-rotate(-12deg) brightness(1.05)" },
   { id: "cool", name: "Cool", css: "saturate(1.2) hue-rotate(16deg) brightness(1.03)" },
-  { id: "vibrant", name: "Vibes", css: "saturate(2) contrast(1.15)" },
-  { id: "dreamy", name: "Dreamy", css: "blur(.6px) brightness(1.12) saturate(1.3)" },
-  { id: "noir", name: "Noir", css: "grayscale(1) contrast(1.5) brightness(.95)" },
+  { id: "vivid", name: "Vivid", css: "saturate(2) contrast(1.15)" },
+  { id: "dreamy", name: "Dreamy", css: "blur(.7px) brightness(1.12) saturate(1.3)" },
+  { id: "sakura", name: "Sakura", css: "hue-rotate(315deg) saturate(1.35) brightness(1.08)" },
+  { id: "sunset", name: "Sunset", css: "sepia(.35) saturate(1.7) hue-rotate(-18deg) brightness(1.05)" },
+  { id: "ocean", name: "Ocean", css: "hue-rotate(155deg) saturate(1.35) brightness(1.04)" },
+  { id: "frost", name: "Frost", css: "saturate(.85) brightness(1.16) contrast(1.05)" },
+  { id: "faded", name: "Faded", css: "contrast(.85) brightness(1.12) saturate(.85)" },
+  { id: "pop", name: "Pop Art", css: "contrast(1.35) saturate(1.8)" },
+  { id: "invert", name: "Negative", css: "invert(1)" },
+  { id: "soft", name: "Soft Glow", css: "brightness(1.1) saturate(1.12) blur(.3px)" },
 ];
 
 const FRAMES = ["none", "solid", "dashed", "dots", "neon"];
-const STICKERS = ["💖", "⭐", "🌈", "🎈", "🎉", "😎", "🌸", "👑"];
+const STICKERS = ["💖", "⭐", "🌈", "🎈", "🎉", "😎", "🌸", "👑", "🦄", "🍭", "🔥", "💜"];
+
+const LAYOUTS = [
+  { id: "strip4", name: "Strip 4", gw: 1, gh: 4, rects: [[0, 0, 1, 1], [0, 1, 1, 1], [0, 2, 1, 1], [0, 3, 1, 1]] },
+  { id: "strip3", name: "Strip 3", gw: 1, gh: 3, rects: [[0, 0, 1, 1], [0, 1, 1, 1], [0, 2, 1, 1]] },
+  { id: "strip2", name: "Strip 2", gw: 1, gh: 2, rects: [[0, 0, 1, 1], [0, 1, 1, 1]] },
+  { id: "grid22", name: "Grid 2×2", gw: 2, gh: 2, rects: [[0, 0, 1, 1], [1, 0, 1, 1], [0, 1, 1, 1], [1, 1, 1, 1]] },
+  { id: "grid23", name: "Grid 2×3", gw: 2, gh: 3, rects: [[0, 0, 1, 1], [1, 0, 1, 1], [0, 1, 1, 1], [1, 1, 1, 1], [0, 2, 1, 1], [1, 2, 1, 1]] },
+  { id: "hero3", name: "Hero 3", gw: 2, gh: 2, rects: [[0, 0, 2, 1], [0, 1, 1, 1], [1, 1, 1, 1]] },
+  { id: "side3", name: "Samping 3", gw: 2, gh: 2, rects: [[0, 0, 1, 2], [1, 0, 1, 1], [1, 1, 1, 1]] },
+  { id: "row3", name: "Baris 3", gw: 3, gh: 1, rects: [[0, 0, 1, 1], [1, 0, 1, 1], [2, 0, 1, 1]] },
+  { id: "wide2", name: "Lebar 2", gw: 2, gh: 1, rects: [[0, 0, 1, 1], [1, 0, 1, 1]] },
+];
 
 const state = {
   filter: FILTERS[0],
   frame: "solid",
   mode: "single",
+  layout: LAYOUTS[0],
   countdownOn: true,
   facing: "user",
   demo: false,
   sticker: "",
+  stickerPos: { x: 0.76, y: 0.7 },
   stream: null,
   busy: false,
   shots: [],
@@ -48,8 +76,9 @@ const state = {
 const demoCanvas = document.createElement("canvas");
 demoCanvas.width = 960;
 demoCanvas.height = 720;
-demoCanvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:none;";
+demoCanvas.style.cssText = "position:absolute;inset:0;width:100%;height:100%;display:none;transition:filter .25s;";
 viewfinder.appendChild(demoCanvas);
+demoCanvas.style.zIndex = "2";
 let demoRaf = 0;
 
 function themeColors() {
@@ -57,14 +86,13 @@ function themeColors() {
   return {
     accent: cs.getPropertyValue("--accent").trim(),
     accent2: cs.getPropertyValue("--accent-2").trim(),
-    panel: cs.getPropertyValue("--panel").trim(),
+    panel: cs.getPropertyValue("--panel-solid").trim() || "#ffffff",
     text: cs.getPropertyValue("--text").trim(),
   };
 }
 
-function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
 async function startCamera() {
   stopDemo();
@@ -76,6 +104,7 @@ async function startCamera() {
     });
     video.srcObject = state.stream;
     video.className = state.facing === "user" ? "front" : "back";
+    video.style.filter = state.filter.css;
     camError.classList.remove("show");
     video.style.display = "block";
     state.demo = false;
@@ -96,7 +125,8 @@ function startDemo() {
   camError.classList.remove("show");
   video.style.display = "none";
   demoCanvas.style.display = "block";
-  const emojis = ["🎉", "😎", "💖", "🌈", "⭐", "🎈"];
+  demoCanvas.style.filter = state.filter.css;
+  const emojis = ["🎉", "😎", "💖", "🌈", "⭐", "🎈", "🦄"];
   const t0 = performance.now();
   const loop = (t) => {
     const ctx = demoCanvas.getContext("2d");
@@ -122,21 +152,16 @@ function startDemo() {
     ctx.textAlign = "center";
     ctx.font = "140px serif";
     ctx.fillText(emojis[Math.floor(elapsed) % emojis.length], w / 2, h / 2 + 50);
-    ctx.font = "600 34px Fredoka, sans-serif";
+    ctx.font = "700 36px Fredoka, sans-serif";
     ctx.fillStyle = "#fff";
-    ctx.fillText("Mode Uji Coba 🧪", w / 2, h - 60);
+    ctx.fillText("Mode Uji Coba 🧪", w / 2, h - 58);
     demoRaf = requestAnimationFrame(loop);
   };
   demoRaf = requestAnimationFrame(loop);
 }
 
-function getSource() {
-  return state.demo ? demoCanvas : video;
-}
-
-function mirrorNeeded() {
-  return !state.demo && state.facing === "user";
-}
+const getSource = () => (state.demo ? demoCanvas : video);
+const mirrorNeeded = () => !state.demo && state.facing === "user";
 
 function drawSource(ctx, w, h) {
   const src = getSource();
@@ -152,6 +177,15 @@ function drawSource(ctx, w, h) {
   const dh = sh * scale;
   ctx.drawImage(src, (w - dw) / 2, (h - dh) / 2, dw, dh);
   ctx.restore();
+}
+
+function drawCover(ctx, src, dx, dy, dw, dh) {
+  const sw = src.width;
+  const sh = src.height;
+  const scale = Math.max(dw / sw, dh / sh);
+  const cw = dw / scale;
+  const ch = dh / scale;
+  ctx.drawImage(src, (sw - cw) / 2, (sh - ch) / 2, cw, ch, dx, dy, dw, dh);
 }
 
 function drawFrame(ctx, w, h, frameId) {
@@ -170,7 +204,6 @@ function drawFrame(ctx, w, h, frameId) {
     ctx.strokeRect(inset, inset, w - inset * 2, h - inset * 2);
   } else if (frameId === "dots") {
     ctx.strokeStyle = accent2;
-    ctx.lineWidth = t;
     ctx.setLineDash([1, t * 2]);
     ctx.lineCap = "round";
     ctx.strokeRect(inset, inset, w - inset * 2, h - inset * 2);
@@ -191,10 +224,12 @@ function drawFrame(ctx, w, h, frameId) {
 function drawSticker(ctx, w, h) {
   if (!state.sticker) return;
   ctx.save();
-  ctx.font = `${Math.round(w * 0.14)}px serif`;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "alphabetic";
-  ctx.fillText(state.sticker, w * 0.05, h - h * 0.05);
+  ctx.font = `${Math.round(w * 0.15)}px serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.shadowColor = "rgba(0,0,0,.4)";
+  ctx.shadowBlur = 14;
+  ctx.fillText(state.sticker, state.stickerPos.x * w, state.stickerPos.y * h);
   ctx.restore();
 }
 
@@ -219,90 +254,94 @@ function flash() {
   flashEl.classList.add("go");
 }
 
-async function runCountdown(extra = "") {
-  if (!state.countdownOn) return;
-  countdownEl.classList.add("show");
-  for (const n of ["3", "2", "1"]) {
-    countdownEl.textContent = extra ? `${n}` : n;
-    await sleep(900);
-  }
-  countdownEl.classList.remove("show");
-  countdownEl.textContent = "";
-}
-
 async function captureSingle() {
-  await runCountdown();
+  if (state.countdownOn) {
+    countdownEl.classList.add("show");
+    for (const n of ["3", "2", "1"]) {
+      countdownEl.textContent = n;
+      await sleep(850);
+    }
+    countdownEl.classList.remove("show");
+    countdownEl.textContent = "";
+  }
   flash();
   await sleep(120);
-  const url = snapCanvas().toDataURL("image/png");
-  addShot(url, "single");
+  addShot(snapCanvas().toDataURL("image/png"), "single");
 }
 
-async function captureStrip() {
+async function captureCollage() {
   const parts = [];
-  for (let i = 1; i <= 4; i++) {
+  const total = state.layout.rects.length;
+  for (let i = 1; i <= total; i++) {
     if (state.countdownOn) {
       countdownEl.classList.add("show");
-      countdownEl.textContent = `${i}/4`;
+      countdownEl.textContent = `${i}/${total}`;
       await sleep(950);
       countdownEl.classList.remove("show");
+      countdownEl.textContent = "";
     } else {
-      await sleep(500);
+      countdownEl.classList.add("show");
+      countdownEl.textContent = `${i}/${total}`;
+      await sleep(550);
+      countdownEl.classList.remove("show");
+      countdownEl.textContent = "";
     }
     flash();
     await sleep(120);
     parts.push(snapCanvas());
   }
-  const url = composeStrip(parts);
-  addShot(url, "strip");
+  addShot(composeCollage(state.layout, parts), "collage");
 }
 
-function composeStrip(parts) {
+function composeCollage(layout, parts) {
   const colors = themeColors();
-  const W = 520;
-  const pad = 22;
+  const cell = 340;
+  const pad = 26;
   const gap = 14;
   const caption = captionInput.value.trim();
-  const capH = caption ? 96 : 44;
-  const photoH = Math.round(((W - pad * 2) * 3) / 4);
-  const H = pad + parts.length * photoH + (parts.length - 1) * gap + capH + pad;
+  const capH = caption ? 104 : 56;
+  const W = layout.gw * cell + (layout.gw - 1) * gap + pad * 2;
+  const H = layout.gh * cell + (layout.gh - 1) * gap + pad * 2 + capH;
   const canvas = document.createElement("canvas");
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = colors.panel === "#1e1e1e" ? "#141414" : "#ffffff";
+  ctx.fillStyle = colors.text.startsWith("#f") ? "#141414" : "#ffffff";
   ctx.fillRect(0, 0, W, H);
 
-  parts.forEach((part, i) => {
-    const y = pad + i * (photoH + gap);
+  layout.rects.forEach((r, i) => {
+    const [rx, ry, rw, rh] = r;
+    const x = pad + rx * (cell + gap);
+    const y = pad + ry * (cell + gap);
+    const w = rw * cell + (rw - 1) * gap;
+    const h = rh * cell + (rh - 1) * gap;
     ctx.save();
     ctx.beginPath();
-    ctx.rect(pad, y, W - pad * 2, photoH);
+    ctx.rect(x, y, w, h);
     ctx.clip();
-    ctx.drawImage(part, 0, 0, part.width, part.height, pad, y, W - pad * 2, photoH);
+    drawCover(ctx, parts[i], x, y, w, h);
     ctx.restore();
     ctx.strokeStyle = colors.accent;
-    ctx.lineWidth = 4;
-    ctx.strokeRect(pad, y, W - pad * 2, photoH);
+    ctx.lineWidth = 5;
+    ctx.strokeRect(x, y, w, h);
   });
 
-  const textY = H - pad - capH / 2 + 10;
   ctx.textAlign = "center";
   ctx.fillStyle = colors.text;
-  ctx.font = "700 40px Fredoka, sans-serif";
-  ctx.fillText(caption || "SnapBooth 💛", W / 2, textY);
+  ctx.font = "700 42px Fredoka, sans-serif";
+  ctx.fillText(caption || "Cekrek! 📸", W / 2, H - capH + (caption ? 46 : 34));
   ctx.fillStyle = colors.accent;
-  ctx.font = "500 20px Fredoka, sans-serif";
-  ctx.fillText("📸 SNAPBOOTH", W / 2, H - pad + 4);
+  ctx.font = "600 19px Fredoka, sans-serif";
+  ctx.fillText("✦ CEKREK! ✦", W / 2, H - 18);
 
-  const stripCanvas = document.createElement("canvas");
-  stripCanvas.width = W;
-  stripCanvas.height = H;
-  const sctx = stripCanvas.getContext("2d");
-  sctx.drawImage(canvas, 0, 0);
-  drawFrame(sctx, W, H, state.frame);
-  return stripCanvas.toDataURL("image/png");
+  const out = document.createElement("canvas");
+  out.width = W;
+  out.height = H;
+  const octx = out.getContext("2d");
+  octx.drawImage(canvas, 0, 0);
+  drawFrame(octx, W, H, state.frame);
+  return out.toDataURL("image/png");
 }
 
 function addShot(url, type) {
@@ -314,21 +353,34 @@ function addShot(url, type) {
 
 function renderShots() {
   shotsEl.innerHTML = "";
+  shotsCount.textContent = state.shots.length;
   if (!state.shots.length) {
     shotsEl.innerHTML = `<p class="shots-empty">Belum ada foto. Klik tombol besar buat mulai!</p>`;
     downloadBtn.disabled = true;
     return;
   }
   state.shots.forEach((s) => {
+    const wrap = document.createElement("div");
+    wrap.className = "shot-wrap" + (s.type !== "single" ? " col-strip" : "");
     const img = document.createElement("img");
     img.src = s.url;
-    img.className = "shot" + (s.type === "strip" ? " strip-shot" : "");
-    if (s.id === state.selectedId) img.style.borderColor = "var(--accent)";
+    img.className = "shot" + (s.id === state.selectedId ? " selected" : "");
     img.onclick = () => {
       state.selectedId = s.id;
       renderShots();
     };
-    shotsEl.appendChild(img);
+    const del = document.createElement("button");
+    del.className = "shot-del";
+    del.textContent = "✕";
+    del.onclick = (e) => {
+      e.stopPropagation();
+      state.shots = state.shots.filter((x) => x.id !== s.id);
+      if (state.selectedId === s.id) state.selectedId = state.shots.at(-1)?.id ?? null;
+      renderShots();
+    };
+    wrap.appendChild(img);
+    wrap.appendChild(del);
+    shotsEl.appendChild(wrap);
   });
   downloadBtn.disabled = false;
 }
@@ -338,7 +390,7 @@ function downloadSelected() {
   if (!shot) return;
   const a = document.createElement("a");
   a.href = shot.url;
-  a.download = `snapbooth-${shot.type}-${Date.now()}.png`;
+  a.download = `cekrek-${shot.type}-${Date.now()}.png`;
   a.click();
 }
 
@@ -348,11 +400,30 @@ async function shoot() {
   shutterBtn.disabled = true;
   try {
     if (state.mode === "single") await captureSingle();
-    else await captureStrip();
+    else await captureCollage();
   } finally {
     state.busy = false;
     shutterBtn.disabled = false;
   }
+}
+
+function updateModeUI() {
+  document.querySelectorAll(".mode-btn").forEach((b) => {
+    b.classList.toggle("active", b.dataset.mode === state.mode);
+  });
+  if (state.mode === "single") {
+    vfBadge.textContent = "Single";
+    shutterHint.textContent = "Klik buat selfie!";
+  } else {
+    vfBadge.textContent = `Kolase · ${state.layout.name} (${state.layout.rects.length} foto)`;
+    shutterHint.textContent = `Ambil ${state.layout.rects.length} foto berturut-turut`;
+  }
+  layoutCount.textContent = state.mode === "collage" ? `aktif: ${state.layout.name}` : "";
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  updateModeUI();
 }
 
 function buildFilters() {
@@ -363,6 +434,10 @@ function buildFilters() {
     const preview = document.createElement("i");
     preview.style.filter = f.css === "none" ? "none" : f.css;
     btn.appendChild(preview);
+    const tick = document.createElement("b");
+    tick.className = "tick";
+    tick.textContent = "✅";
+    btn.appendChild(tick);
     const label = document.createElement("span");
     label.textContent = f.name;
     btn.appendChild(label);
@@ -397,22 +472,90 @@ function buildStickers() {
   none.className = "sticker active";
   none.textContent = "❌";
   none.title = "Tanpa stiker";
-  none.onclick = () => {
-    state.sticker = "";
-    document.querySelectorAll(".sticker").forEach((b) => b.classList.remove("active"));
-    none.classList.add("active");
-  };
+  none.onclick = () => selectSticker("", none);
   stickerRow.appendChild(none);
   STICKERS.forEach((s) => {
     const btn = document.createElement("button");
     btn.className = "sticker";
     btn.textContent = s;
-    btn.onclick = () => {
-      state.sticker = s;
-      document.querySelectorAll(".sticker").forEach((b) => b.classList.remove("active"));
-      btn.classList.add("active");
-    };
+    btn.onclick = () => selectSticker(s, btn);
     stickerRow.appendChild(btn);
+  });
+}
+
+function selectSticker(s, btn) {
+  state.sticker = s;
+  document.querySelectorAll(".sticker").forEach((b) => b.classList.remove("active"));
+  btn.classList.add("active");
+  stickerFloat.textContent = s || "";
+  stickerFloat.classList.toggle("show", !!s);
+  applyStickerPos();
+}
+
+function applyStickerPos() {
+  stickerFloat.style.left = `${state.stickerPos.x * 100}%`;
+  stickerFloat.style.top = `${state.stickerPos.y * 100}%`;
+}
+
+function buildLayouts() {
+  LAYOUTS.forEach((layout, idx) => {
+    const btn = document.createElement("button");
+    btn.className = "layout-opt" + (idx === 0 ? " active" : "");
+    const mini = document.createElement("div");
+    mini.className = "layout-mini";
+    layout.rects.forEach(([rx, ry, rw, rh]) => {
+      const cellEl = document.createElement("div");
+      cellEl.className = "cell";
+      cellEl.style.left = `${(rx / layout.gw) * 100}%`;
+      cellEl.style.top = `${(ry / layout.gh) * 100}%`;
+      cellEl.style.width = `calc(${(rw / layout.gw) * 100}% - 2px)`;
+      cellEl.style.height = `calc(${(rh / layout.gh) * 100}% - 2px)`;
+      mini.appendChild(cellEl);
+    });
+    const label = document.createElement("span");
+    label.textContent = `${layout.name} · ${layout.rects.length} foto`;
+    btn.appendChild(mini);
+    btn.appendChild(label);
+    btn.onclick = () => {
+      state.layout = layout;
+      document.querySelectorAll(".layout-opt").forEach((b) => b.classList.toggle("active", b === btn));
+      setMode("collage");
+    };
+    layoutGrid.appendChild(btn);
+  });
+}
+
+function setupStickerDrag() {
+  stickerFloat.addEventListener("pointerdown", (e) => {
+    if (!state.sticker) return;
+    e.preventDefault();
+    stickerFloat.classList.add("dragging");
+    const rect = viewfinder.getBoundingClientRect();
+    const move = (ev) => {
+      state.stickerPos = {
+        x: clamp((ev.clientX - rect.left) / rect.width, 0.07, 0.93),
+        y: clamp((ev.clientY - rect.top) / rect.height, 0.1, 0.93),
+      };
+      applyStickerPos();
+    };
+    const up = () => {
+      stickerFloat.classList.remove("dragging");
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  });
+}
+
+function setupTabs() {
+  document.querySelectorAll(".tab").forEach((tab) => {
+    tab.onclick = () => {
+      document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("active", t === tab));
+      document.querySelectorAll(".tab-pane").forEach((p) => {
+        p.classList.toggle("active", p.dataset.pane === tab.dataset.tab);
+      });
+    };
   });
 }
 
@@ -440,15 +583,16 @@ clearBtn.onclick = () => {
   renderShots();
 };
 document.querySelectorAll(".mode-btn").forEach((btn) => {
-  btn.onclick = () => {
-    state.mode = btn.dataset.mode;
-    document.querySelectorAll(".mode-btn").forEach((b) => b.classList.toggle("active", b === btn));
-  };
+  btn.onclick = () => setMode(btn.dataset.mode);
 });
 
 buildFilters();
 buildFrames();
 buildStickers();
-countdownBtn.classList.add("on");
+buildLayouts();
+setupStickerDrag();
+setupTabs();
+updateModeUI();
 renderShots();
+applyStickerPos();
 startCamera();
